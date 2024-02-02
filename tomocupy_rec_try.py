@@ -63,7 +63,7 @@ data_queue = Queue(32)
 
 for id_slice in cl_conf.id_slices:
     cl_reader.read_data_try(data_queue, cl_conf, id_slice)
-    clpthandle.recon_try_slice(data_queue, cl_conf, id_slice)
+    clpthandle.recon_try(data_queue, cl_conf, id_slice)
 print('Done!')
 
 

@@ -11,9 +11,10 @@ from os import listdir
 from os.path import isfile, join
 from types import SimpleNamespace
 from queue import Queue
-
+from threading import Thread
 
 import reader as dx
+import utils
 
 fname = '/data/2022-12/Luxi_173.h5'
 data, flat, dark, theta = dxchange.read_aps_tomoscan_hdf5(fname)#, sino=(100, 400))
@@ -51,18 +52,33 @@ clrotthandle = tomocupy.FindCenter(args)
 args.rotation_axis = clrotthandle.find_center()*2**args.binning
 print(f'set rotaion  axis {args.rotation_axis}')
 
-clpthandle = tomocupy.GPURec(args)
-clpthandle.recon_try()
-
-
 cl_reader = dx.Reader(args)
 cl_conf = dx.ConfigSizes(args, cl_reader)
-clpthandle = tomocupy.GPURec_new(args, cl_reader, cl_conf)
+
+# threads for data reading from disk
+read_threads = []
+for k in range(cl_conf.args.max_read_threads):
+    read_threads.append(utils.WRThread())
+
+# queue for streaming projections
 data_queue = Queue(32)
 
-for id_slice in cl_conf.id_slices:
-    cl_reader.read_data_try(data_queue, cl_conf, id_slice)
-    clpthandle.recon_try_slice(data_queue, cl_conf, id_slice)
+# start reading data to a queue
+main_read_thread = Thread(target=cl_reader.read_data_to_queue, args=(data_queue, read_threads, cl_reader, cl_conf))
+main_read_thread.start()
+
+clpthandle = tomocupy.GPURec(args, cl_reader, cl_conf)
+clpthandle.recon_all(data_queue, cl_conf)
+
+
+# cl_reader = dx.Reader(args)
+# cl_conf = dx.ConfigSizes(args, cl_reader)
+# clpthandle = tomocupy.GPURec(args, cl_reader, cl_conf)
+# data_queue = Queue(32)
+
+# for id_slice in cl_conf.id_slices:
+#     cl_reader.read_data_try(data_queue, cl_conf, id_slice)
+#     clpthandle.recon_try(data_queue, cl_conf, id_slice)
 print('Done!')
 
 

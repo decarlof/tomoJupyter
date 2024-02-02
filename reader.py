@@ -202,6 +202,24 @@ class Reader():
         self.read_data_chunk_to_queue(
             data_queue, ids_proj, st_z, end_z, st_n, end_n, 0, in_dtype)
 
+    def read_data_to_queue(self, data_queue, read_threads, cl_reader, cl_conf):
+        """Reading data from hard disk and putting it to a queue"""
+
+        in_dtype = cl_conf.in_dtype
+        nzchunk = cl_conf.nzchunk
+        lzchunk =cl_conf.lzchunk
+        ncz = cl_conf.ncz
+        ids_proj = cl_conf.ids_proj
+        st_n = cl_conf.st_n
+        end_n = cl_conf.end_n
+
+        for k in range(nzchunk):
+            st_z = self.args.start_row+k*ncz*2**self.args.binning
+            end_z = self.args.start_row + \
+                (k*ncz+lzchunk[k])*2**self.args.binning
+            ithread = utils.find_free_thread(read_threads)
+            read_threads[ithread].run(cl_reader.read_data_chunk_to_queue, (
+                data_queue, ids_proj, st_z, end_z, st_n, end_n, k, in_dtype))
 
 class ConfigSizes():
     '''
