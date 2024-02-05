@@ -32,8 +32,6 @@ args = SimpleNamespace(**params_dict)
 args.reconstruction_type          = 'try'
 args.file_name                    = fname
 args.rotation_axis_auto           = 'auto'
-args.rotation_axis_method         = 'sift' 
-args.dtype                        = 'float32'
 args.out_path_name                = '/data/tmpfdc/' 
 args.clear_folder                 = True
 args.fbp_filter                   = 'shepp' 
@@ -43,26 +41,20 @@ args.pixel_size                   = meta_dict['measurement_instrument_detection_
 args.propagation_distance         = meta_dict['measurement_instrument_detector_motor_stack_setup_z'][0]
 args.energy                       = meta_dict['measurement_instrument_monochromator_energy'][0]
 args.retrieve_phase_alpha         = 0.0008
-args.rotation_axis_sift_threshold = 0.5
-args.rotation_axis                = -1
-args.minus_log                    = True
+args.rotation_axis_sift_threshold = 0.5 # remove this once the default for rotation-axis-sift-threshold in config.py is set to 0.5 (now is '0.5')
 
 clrotthandle = tomocupy.FindCenter(args)
 args.rotation_axis = clrotthandle.find_center()*2**args.binning
 print(f'set rotaion  axis {args.rotation_axis}')
 
-# Using the old class
-# clpthandle = tomocupy.GPURec(args)
-# clpthandle.recon_try()
-
-
-cl_reader = dx.Reader(args)
-cl_conf = dx.ConfigSizes(args, cl_reader)
-clpthandle = tomocupy.GPURec(cl_reader, cl_conf)
+# cl_reader = dx.Reader(args)
+# cl_conf = dx.ConfigSizes(args, cl_reader)
+cl_conf = dx.Reader(args)
+clpthandle = tomocupy.GPURec(cl_conf)
 data_queue = Queue(32)
 
 for id_slice in cl_conf.id_slices:
-    cl_reader.read_data_try(data_queue, cl_conf, id_slice)
+    cl_conf.read_data_try(data_queue, id_slice)
     clpthandle.recon_try(data_queue, cl_conf, id_slice)
 print('Done!')
 
