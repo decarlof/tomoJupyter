@@ -58,7 +58,7 @@ print(f'set rotaion  axis {args.rotation_axis}')
 
 cl_reader = dx.Reader(args)
 cl_conf = dx.ConfigSizes(args, cl_reader)
-clpthandle = tomocupy.GPURec(args, cl_reader, cl_conf)
+clpthandle = tomocupy.GPURec(cl_reader, cl_conf)
 data_queue = Queue(32)
 
 for id_slice in cl_conf.id_slices:

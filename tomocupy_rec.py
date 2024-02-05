@@ -67,18 +67,10 @@ data_queue = Queue(32)
 main_read_thread = Thread(target=cl_reader.read_data_to_queue, args=(data_queue, read_threads, cl_reader, cl_conf))
 main_read_thread.start()
 
-clpthandle = tomocupy.GPURec(args, cl_reader, cl_conf)
+clpthandle = tomocupy.GPURec(cl_reader, cl_conf)
 clpthandle.recon_all(data_queue, cl_conf)
 
 
-# cl_reader = dx.Reader(args)
-# cl_conf = dx.ConfigSizes(args, cl_reader)
-# clpthandle = tomocupy.GPURec(args, cl_reader, cl_conf)
-# data_queue = Queue(32)
-
-# for id_slice in cl_conf.id_slices:
-#     cl_reader.read_data_try(data_queue, cl_conf, id_slice)
-#     clpthandle.recon_try(data_queue, cl_conf, id_slice)
 print('Done!')
 
 
