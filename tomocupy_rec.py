@@ -14,6 +14,8 @@ from queue import Queue
 from threading import Thread
 
 import reader as dx
+import writer as wr
+
 import utils
 
 fname = '/data/2022-12/Luxi_173.h5'
@@ -50,6 +52,7 @@ args.rotation_axis = clrotthandle.find_center()*2**args.binning
 print(f'set rotaion  axis {args.rotation_axis}')
 
 cl_reader = dx.Reader(args)
+cl_writer = wr.Writer(cl_reader)
 
 # threads for data reading from disk
 read_threads = []
@@ -63,8 +66,10 @@ data_queue = Queue(32)
 main_read_thread = Thread(target=cl_reader.read_data_to_queue, args=(data_queue, read_threads))
 main_read_thread.start()
 
-clpthandle = tomocupy.GPURec(cl_reader)
-clpthandle.recon_all(data_queue, cl_reader)
+
+
+clpthandle = tomocupy.GPURec(cl_reader, cl_writer)
+clpthandle.recon_all(data_queue, cl_reader, cl_writer)
 
 
 print('Done!')
