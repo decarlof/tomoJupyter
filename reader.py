@@ -45,6 +45,7 @@ from ast import literal_eval
 import numpy as np
 import h5py
 
+from threading import Thread
 
 __author__ = "Viktor Nikitin"
 __copyright__ = "Copyright (c) 2022, UChicago Argonne, LLC."
@@ -218,6 +219,10 @@ class Reader():
         self.in_dtype = in_dtype
         self.st_n = st_n
         self.end_n = end_n
+
+        # full shapes
+        self.shape_data_full = (nproj, nz, ni)
+        self.shape_data_fulln = (nproj, nz, n)
 
     def init_sizes_try(self):
         """Calculating sizes for try reconstruction by chunks"""
@@ -400,3 +405,28 @@ class Reader():
             ithread = utils.find_free_thread(read_threads)
             read_threads[ithread].run(self.read_data_chunk_to_queue, (
                 data_queue, self.ids_proj, st_z, end_z, self.st_n, self.end_n, k, self.in_dtype))
+
+    def read_data_parallel(self, nthreads=16):
+        """Reading data in parallel (good for ssd disks)"""
+
+        st_n = self.st_n
+        end_n = self.end_n
+        flat, dark = self.read_flat_dark(st_n, end_n)
+        # parallel read of projections
+        data = np.zeros([*self.shape_data_full], dtype=self.in_dtype)
+        lchunk = int(np.ceil(data.shape[0]/nthreads))
+        procs = []
+        for k in range(nthreads):
+            st_proj = k*lchunk
+            end_proj = min((k+1)*lchunk, self.args.end_proj -
+                           self.args.start_proj)
+            if st_proj >= end_proj:
+                continue
+            read_thread = Thread(
+                target=self.read_proj_chunk, args=(data, st_proj, end_proj, self.args.start_row, self.args.end_row, st_n, end_n))
+            procs.append(read_thread)
+            read_thread.start()
+        for proc in procs:
+            proc.join()
+
+        return data, flat, dark
